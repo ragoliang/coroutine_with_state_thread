@@ -46,14 +46,9 @@ int Coroutine_test()
 
 int main(int argc, char** argv)
 {
-   if (st_set_eventsys(ST_EVENTSYS_ALT) < 0) {
-        srs_trace("st_set_eventsys failed");
-        return -1;
-    }
-
     if (st_init() < 0) {
-        srs_trace("st_init failed");
-        return -1;
+        printf("st_init failed\n");
+        return -2;
     }
     Coroutine_test();
 
