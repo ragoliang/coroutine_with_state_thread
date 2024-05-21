@@ -125,8 +125,7 @@ private:
         return nullptr;
     }
 
-    void _M_start_thread(__shared_base_type __b)
-    {
+    void _M_start_thread(__shared_base_type __b) {
         __b->_M_this_ptr = __b;
         _M_id._M_thread = st_thread_create(execute_native_thread_routine, __b.get(), 1, 0);
         if (!_M_id._M_thread) {
