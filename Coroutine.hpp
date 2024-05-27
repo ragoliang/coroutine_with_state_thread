@@ -18,9 +18,8 @@ extern "C" {
 
 class Coroutine {
 private:
-    typedef unsigned long thread_id_t;
     struct _Impl_base;
-    typedef std::shared_ptr<_Impl_base>	__shared_base_type;
+    typedef std::shared_ptr<_Impl_base> __shared_base_type;
 
     class Cid {
         st_thread_t _M_thread;
@@ -49,7 +48,7 @@ private:
     };
 
     struct _Impl_base {
-        __shared_base_type	_M_this_ptr;
+        __shared_base_type _M_this_ptr;
 
         virtual ~_Impl_base() {}
 
@@ -73,10 +72,12 @@ private:
 
     template<typename Callable>
     static std::shared_ptr<_Impl<Callable>> _M_make_routine(Callable &&__f) {
-        return std::make_shared<_Impl<Callable>>(std::forward<Callable>(__f));
+        return std::make_shared<_Impl < Callable>>
+        (std::forward<Callable>(__f));
     }
 
 public:
+    typedef unsigned long thread_id_t;
     Coroutine() = default;
     template<typename Callable, typename...  Args>
     explicit Coroutine(Callable &&__f, Args &&... __args) {
@@ -92,6 +93,7 @@ public:
     }
 
     Coroutine &operator=(const Coroutine &) = delete;
+
     Coroutine(const Coroutine &r) = delete;
 
     Coroutine(Coroutine &&__t) noexcept {
@@ -105,7 +107,7 @@ public:
     }
 
     thread_id_t get_cid() {
-        return (thread_id_t)_M_id._M_thread;
+        return (thread_id_t) _M_id._M_thread;
     }
 
     void interrupt() {
@@ -116,6 +118,31 @@ public:
         st_thread_interrupt(_M_id._M_thread);
     }
 
+    bool joinable() {
+        if (!_M_id._M_thread) {
+            return false;
+        }
+        return !(_M_id._M_thread == st_thread_self());
+    }
+
+    void join() {
+        if (!joinable()) {
+            return;
+        }
+        st_thread_join(_M_id._M_thread, nullptr);
+        _M_id._M_thread = nullptr;
+    }
+
+    void detach() {
+        if (!_M_id._M_thread) {
+            return;
+        }
+        if (_M_id._M_thread == st_thread_self()) {
+            return;
+        }
+    
+        _M_id._M_thread = nullptr;
+    }
 private:
     static void *execute_native_thread_routine(void *__p) {
         Coroutine::_Impl_base *__t = static_cast<Coroutine::_Impl_base *>(__p);
@@ -134,13 +161,6 @@ private:
         }
     }
 
-    void join() {
-        if (!_M_id._M_thread) {
-            return;
-        }
-        st_thread_join(_M_id._M_thread, nullptr);
-    }
-
     void swap(Coroutine &__t) {
         std::swap(_M_id, __t._M_id);
     }
@@ -148,5 +168,4 @@ private:
 private:
     Cid _M_id;
 };
-
 #endif
