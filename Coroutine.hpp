@@ -1,9 +1,6 @@
-//
-// Created by rago on 2024/5/20.
-//
 
-#ifndef COROUTINE_HPP
-#define COROUTINE_HPP
+#ifndef LIVE_STREAM_PROXY2_0_COROUTINE_HPP
+#define LIVE_STREAM_PROXY2_0_COROUTINE_HPP
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,7 +12,6 @@ extern "C" {
 #include <functional>
 #include <thread>
 #include <memory>
-
 class Coroutine {
 private:
     struct _Impl_base;
@@ -72,8 +68,7 @@ private:
 
     template<typename Callable>
     static std::shared_ptr<_Impl<Callable>> _M_make_routine(Callable &&__f) {
-        return std::make_shared<_Impl < Callable>>
-        (std::forward<Callable>(__f));
+        return std::make_shared<_Impl< Callable>>(std::forward<Callable>(__f));
     }
 
 public:
@@ -87,9 +82,10 @@ public:
     }
 
     ~Coroutine() {
-        interrupt();
-        // st库中_st_thread_main函数执行完execute_native_thread_routine()后会调用st_thread_exit()
-        join();
+        // 协构的时候，不应该是可以被join状态
+        if (joinable()) {
+            std::terminate();
+        }
     }
 
     Coroutine &operator=(const Coroutine &) = delete;
@@ -101,8 +97,10 @@ public:
     }
 
     Coroutine &operator=(Coroutine &&__t) noexcept {
-        interrupt();
-        swap(__t);
+        if (joinable()) {
+	        std::terminate();
+	    }
+	    swap(__t);
         return *this;
     }
 
@@ -118,19 +116,12 @@ public:
         st_thread_interrupt(_M_id._M_thread);
     }
 
-    bool joinable() {
-        if (!_M_id._M_thread) {
-            return false;
-        }
-        return !(_M_id._M_thread == st_thread_self());
-    }
-
     void join() {
         if (!joinable()) {
             return;
         }
         st_thread_join(_M_id._M_thread, nullptr);
-        _M_id._M_thread = nullptr;
+        _M_id = Cid();
     }
 
     void detach() {
@@ -140,8 +131,8 @@ public:
         if (_M_id._M_thread == st_thread_self()) {
             return;
         }
-    
-        _M_id._M_thread = nullptr;
+        // _M_id._M_thread = nullptr
+        _M_id = Cid();
     }
 private:
     static void *execute_native_thread_routine(void *__p) {
@@ -165,7 +156,18 @@ private:
         std::swap(_M_id, __t._M_id);
     }
 
+    bool joinable() {
+        if (!_M_id._M_thread) {
+            return false;
+        }
+        return _M_id._M_thread != st_thread_self();
+    }
+
 private:
     Cid _M_id;
 };
-#endif
+
+
+
+#endif //LIVE_STREAM_PROXY2_0_COROUTINE_HPP
+
